@@ -16,10 +16,15 @@ class Quotation:
     has_challans: bool = False
     has_site_photos: bool = False
     subfolders: dict[str, Path] = field(default_factory=dict)
+    challan_files: list[str] = field(default_factory=list)
 
     @property
     def full_number(self) -> str:
         return f"QTN-{self.number}"
+
+    @property
+    def has_missing_pdf(self) -> bool:
+        return not self.pdf_exists
 
 
 @dataclass

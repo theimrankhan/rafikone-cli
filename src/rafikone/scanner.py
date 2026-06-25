@@ -46,6 +46,7 @@ def scan_quotations(
     site_filter: Optional[str] = None,
     date_filter: Optional[str] = None,
     limit: Optional[int] = None,
+    missing_pdf: bool = False,
 ) -> list[Quotation]:
     result: list[Quotation] = []
     normalised_filter = _normalise_for_search(site_filter) if site_filter else None
@@ -54,6 +55,8 @@ def scan_quotations(
             if normalised_filter and normalised_filter not in _normalise_for_search(q.site):
                 continue
             if date_filter and not q.date.startswith(date_filter):
+                continue
+            if missing_pdf and not q.has_missing_pdf:
                 continue
             result.append(q)
     result.sort(key=lambda q: q.date + q.number, reverse=True)
@@ -150,6 +153,13 @@ def _scan_quotation(number: str, site_name: str, qtn_dir: Path) -> Quotation:
         if sf_path.exists():
             subfolders[sf] = sf_path
 
+    challan_files: list[str] = []
+    challans_dir = qtn_dir / "Challans"
+    if challans_dir.exists():
+        challan_files = sorted(
+            f.name for f in challans_dir.iterdir() if f.is_file()
+        )
+
     return Quotation(
         number=number,
         site=site_name,
@@ -161,6 +171,7 @@ def _scan_quotation(number: str, site_name: str, qtn_dir: Path) -> Quotation:
         has_challans=(qtn_dir / "Challans").exists(),
         has_site_photos=(qtn_dir / "Site_Photos").exists(),
         subfolders=subfolders,
+        challan_files=challan_files,
     )
 
 

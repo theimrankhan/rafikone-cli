@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from datetime import date
+import csv
+import json
+import shutil
+from datetime import date, datetime
 from pathlib import Path
 
 import typer
@@ -212,6 +215,10 @@ def list_cmd(
         False, "--detailed",
         help="Show status columns (PDF, Invoices, Payments, Challans, Photos)",
     ),
+    missing_pdf: bool = typer.Option(
+        False, "--missing-pdf",
+        help="Show only quotations missing a quotation PDF",
+    ),
 ) -> None:
     """List all quotations.
 
@@ -223,10 +230,11 @@ def list_cmd(
         rafikone list --site akash\n
         rafikone list --date 2026\n
         rafikone list --date 2026-06\n
-        rafikone list --detailed
+        rafikone list --detailed\n
+        rafikone list --missing-pdf
     """
     try:
-        qtns = scan_quotations(site_filter=site, date_filter=date)
+        qtns = scan_quotations(site_filter=site, date_filter=date, missing_pdf=missing_pdf)
     except ConfigError as e:
         _handle_error(
             "Cannot list quotations",
@@ -490,6 +498,128 @@ def stats() -> None:
         )
 
     print_stats(s)
+
+
+@app.command()
+def export(
+    fmt: str = typer.Option(
+        "csv", "--format", "-f",
+        help="Output format: csv or json",
+    ),
+    output: str = typer.Option(
+        None, "--output", "-o",
+        help="Output file path (default: rafikone-export-<timestamp>.csv/json)",
+    ),
+) -> None:
+    """Export all quotations to CSV or JSON.
+
+    Exports all quotations with full details including challan file names.
+    Useful for reporting and analysis.
+
+    Examples:\n
+        rafikone export\n
+        rafikone export --format json\n
+        rafikone export --output my_export.csv
+    """
+    try:
+        sites = scan_all()
+    except ConfigError as e:
+        _handle_error(
+            "Cannot export quotations",
+            detail=str(e),
+            fix="Run 'rafikone init' first to configure your project root.",
+        )
+
+    all_qtns = [q for s in sites for q in s.quotations]
+    if not all_qtns:
+        console.print("[yellow]No quotations to export.[/]")
+        return
+
+    if fmt not in ("csv", "json"):
+        _handle_error("Invalid format", detail="Supported formats: csv, json")
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    if not output:
+        output = f"rafikone-export-{timestamp}.{fmt}"
+
+    out_path = Path(output).expanduser().resolve()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    rows = []
+    for q in sorted(all_qtns, key=lambda x: (x.date, x.number)):
+        rows.append({
+            "QTN": q.full_number,
+            "Site": q.site,
+            "Date": q.date,
+            "Has PDF": "Yes" if q.pdf_exists else "No",
+            "Has Invoices": "Yes" if q.has_invoices else "No",
+            "Has Payments": "Yes" if q.has_payments else "No",
+            "Has Challans": "Yes" if q.has_challans else "No",
+            "Has Site Photos": "Yes" if q.has_site_photos else "No",
+            "Challan Count": len(q.challan_files),
+            "Challan Files": "; ".join(q.challan_files),
+            "Path": str(q.path),
+        })
+
+    try:
+        if fmt == "csv":
+            with out_path.open("w", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=rows[0].keys())
+                writer.writeheader()
+                writer.writerows(rows)
+        else:
+            with out_path.open("w") as f:
+                json.dump(rows, f, indent=2)
+    except OSError as e:
+        _handle_error("Failed to write export file", detail=str(e))
+
+    console.print(f"[green]✔ Exported {len(rows)} quotations to:[/] {out_path}")
+
+
+@app.command()
+def backup() -> None:
+    """Backup the entire project to a zip archive.
+
+    Creates a timestamped zip backup of the project root directory and
+    saves it to ~/rafikone-backups/.
+
+    Examples:\n
+        rafikone backup
+    """
+    try:
+        root = get_project_root()
+    except ConfigError as e:
+        _handle_error(
+            "Cannot run backup",
+            detail=str(e),
+            fix="Run 'rafikone init' first to configure your project root.",
+        )
+
+    if not root.exists():
+        _handle_error("Project root does not exist", detail=str(root))
+
+    backup_dir = Path.home() / "rafikone-backups"
+    backup_dir.mkdir(parents=True, exist_ok=True)
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    archive_name = f"rafikone-backup-{timestamp}"
+    archive_path = backup_dir / archive_name
+
+    try:
+        with console.status("[yellow]Creating backup..."):
+            shutil.make_archive(
+                str(archive_path),
+                "zip",
+                root_dir=root.parent,
+                base_dir=root.name,
+            )
+    except OSError as e:
+        _handle_error("Backup failed", detail=str(e))
+
+    final_path = backup_dir / f"{archive_name}.zip"
+    size = final_path.stat().st_size
+    size_str = f"{size / 1024 / 1024:.1f} MB" if size > 1024 * 1024 else f"{size / 1024:.1f} KB"
+    console.print(f"[green]✔ Backup created:[/] {final_path} [dim]({size_str})[/]")
 
 
 @app.command()

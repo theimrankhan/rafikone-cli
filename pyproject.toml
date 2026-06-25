@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rafikone"
-version = "1.1.0"
+version = "1.2.0"
 description = "Ubuntu CLI Quotation Manager"
 requires-python = ">=3.12"
 dependencies = [

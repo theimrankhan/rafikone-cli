@@ -61,7 +61,7 @@ class HelpScreen(Screen):
         about.add_column()
 
         about.add_row(Text("Name"), Text("RafikOne CLI"))
-        about.add_row(Text("Version"), Text("1.1.0"))
+        about.add_row(Text("Version"), Text("1.2.0"))
         about.add_row(Text("License"), Text("MIT"))
         about.add_row(Text("Author"), Text("Rafikone"))
         about.add_row(Text(""), Text(""))

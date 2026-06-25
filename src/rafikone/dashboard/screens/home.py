@@ -17,6 +17,8 @@ MENU_ITEMS = [
     ("List Quotations", "go:list"),
     ("Recent Quotations", "go:recent"),
     ("Statistics", "go:stats"),
+    ("Export Quotations", "shell:rafikone export"),
+    ("Backup", "shell:rafikone backup"),
     ("Settings", "go:settings"),
     ("Help", "go:help"),
     ("Exit", "exit"),
@@ -30,7 +32,7 @@ class HomeScreen(Screen):
 
     def render(self) -> Panel:
         title = Text("RAFIKONE CLI", style="bold cyan")
-        version = Text("v1.1.0", style="dim")
+        version = Text("v1.2.0", style="dim")
 
         try:
             root = get_project_root()
@@ -56,7 +58,7 @@ class HomeScreen(Screen):
         info.add_column(style="bold")
         info.add_column()
         info.add_row(Text("Root"), Text(root_str))
-        info.add_row(Text("Version"), Text("1.1.0"))
+        info.add_row(Text("Version"), Text("1.2.0"))
         info.add_row(Text(""))
 
         has_stats = bool(stats)
