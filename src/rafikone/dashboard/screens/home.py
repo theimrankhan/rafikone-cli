@@ -117,19 +117,7 @@ class HomeScreen(Screen):
             if action == "exit":
                 return "exit"
             if action == "go:create":
-                from rafikone.interactive import confirm_create, pick_date, pick_site
-                from rafikone.creator import create_quotation
-                from rafikone.numbering import get_next_number
-                from datetime import date
-                try:
-                    site = pick_site()
-                    date_str = pick_date(date.today().isoformat())
-                    qtn_num = get_next_number()
-                    if confirm_create(site, date_str, qtn_num):
-                        create_quotation(site, date_str, qtn_num)
-                except SystemExit:
-                    pass
-                return "refresh"
+                return "go:create"
             if action == "go:recent":
                 self.router.push("list")
                 self.router.clear_data("list")

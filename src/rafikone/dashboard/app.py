@@ -130,7 +130,7 @@ class DashboardApp:
             layout=Layout(
                 Window(
                     FormattedTextControl(self._get_formatted_text),
-                    dont_extend_height=False,
+                    dont_extend_height=True,
                 )
             ),
             key_bindings=kb,
@@ -140,16 +140,23 @@ class DashboardApp:
 
     def _dispatch(self, action: str | None, event: Any) -> None:
         if action is None:
+            event.app.invalidate()
             return
         if action == "exit":
             event.app.exit()
-        elif action == "back":
+            return
+        if action == "back":
             if self.router.current != "home":
                 prev = self.router.current
                 self._screens[prev].on_exit()
                 self.router.pop()
                 self._current.on_enter()
-        elif action.startswith("go:"):
+            event.app.invalidate()
+            return
+        if action == "go:create":
+            event.app.exit(result="external:create")
+            return
+        if action.startswith("go:"):
             target = action[3:]
             data = None
             if "|" in target:
@@ -161,14 +168,41 @@ class DashboardApp:
                     data = None
             self.router.push(target, data)
             self._current.on_enter(data)
-        elif action.startswith("cmd:"):
+            event.app.invalidate()
+            return
+        if action.startswith("cmd:"):
             cmd = action[4:]
             subprocess.Popen(["xdg-open", cmd], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
-        elif action.startswith("shell:"):
+            event.app.invalidate()
+            return
+        if action.startswith("shell:"):
             cmd = action[6:]
             subprocess.run(cmd, shell=True)
+            event.app.invalidate()
+            return
         event.app.invalidate()
 
     def run(self) -> None:
         self._current.on_enter()
-        self._pt_app.run()
+        while True:
+            result = self._pt_app.run()
+            if result is None or result == "exit":
+                break
+            if result == "external:create":
+                self._run_create()
+            self._pt_app = self._build_app()
+            self._current.on_enter()
+
+    def _run_create(self) -> None:
+        from rafikone.interactive import confirm_create, pick_date, pick_site
+        from rafikone.creator import create_quotation
+        from rafikone.numbering import get_next_number
+        from datetime import date
+        try:
+            site = pick_site()
+            date_str = pick_date(date.today().isoformat())
+            qtn_num = get_next_number()
+            if confirm_create(site, date_str, qtn_num):
+                create_quotation(site, date_str, qtn_num)
+        except SystemExit:
+            pass
