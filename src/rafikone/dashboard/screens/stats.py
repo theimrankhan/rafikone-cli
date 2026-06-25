@@ -78,12 +78,15 @@ class StatsScreen(Screen):
         except Exception:
             pass
 
+        hint = Text("Esc Back")
+        hint.stylize("dim")
+
         content = Table.grid(padding=(0, 1))
         content.add_column()
         content.add_row(title)
-        content.add_row("")
+        content.add_row(Text(""))
         content.add_row(info)
-        content.add_row("")
-        content.add_row("[dim]Esc Back[/]")
+        content.add_row(Text(""))
+        content.add_row(hint)
 
         return Panel(content, title="Statistics", border_style="yellow")

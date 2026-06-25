@@ -134,7 +134,7 @@ class DetailScreen(Screen):
 
     def render(self) -> Panel:
         if self._qtn is None:
-            return Panel("[yellow]Quotation not found[/]", title="Error")
+            return Panel(Text("Quotation not found", style="yellow"), title="Error")
 
         q = self._qtn
 

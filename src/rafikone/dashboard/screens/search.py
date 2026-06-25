@@ -27,9 +27,12 @@ class SearchScreen(Screen):
         self._query = ""
         self._selected_index = 0
         self._all_qtns = []
-        for site in scan_all():
-            for q in site.quotations:
-                self._all_qtns.append(q)
+        try:
+            for site in scan_all():
+                for q in site.quotations:
+                    self._all_qtns.append(q)
+        except Exception:
+            self._all_qtns = []
         self._filter()
 
     def handle_key(self, key: str) -> str | None:
@@ -74,8 +77,16 @@ class SearchScreen(Screen):
 
     def render(self) -> Panel:
         title = Text("Search Quotations", style="bold cyan")
-        search_bar = f"[bold]Search:[/] {self._query}[blinking]█[/]"
-        result_count = f"[dim]{len(self._results)} results[/]"
+
+        search_text = Text("Search: ")
+        search_text.stylize("bold")
+        search_text.append(self._query)
+        cursor = Text("█")
+        cursor.stylize("blink")
+        search_text.append(cursor)
+
+        count_text = Text(f"{len(self._results)} results")
+        count_text.stylize("dim")
 
         table = Table(box=None, show_header=False, padding=(0, 1))
         table.add_column("", no_wrap=True, width=2)
@@ -85,26 +96,36 @@ class SearchScreen(Screen):
 
         for i, q in enumerate(self._results[:20]):
             pointer = "▸" if i == self._selected_index else " "
-            style = "" if i == self._selected_index else "dim"
-            table.add_row(
-                f"[bold]{pointer}[/]",
-                f"[{style}]QTN-{q.number}[/]",
-                f"[{style}]{q.site}[/]",
-                f"[{style}]{q.date}[/]",
-            )
+            pointer_text = Text(pointer)
+            pointer_text.stylize("bold")
+
+            qtn_text = Text(f"QTN-{q.number}")
+            site_text = Text(q.site)
+            date_text = Text(q.date)
+            if i != self._selected_index:
+                qtn_text.stylize("dim")
+                site_text.stylize("dim")
+                date_text.stylize("dim")
+
+            table.add_row(pointer_text, qtn_text, site_text, date_text)
 
         if len(self._results) > 20:
-            table.add_row("", f"[dim]... and {len(self._results) - 20} more[/]", "", "")
+            more = Text(f"... and {len(self._results) - 20} more")
+            more.stylize("dim")
+            table.add_row(Text(""), more, Text(""), Text(""))
+
+        hint = Text("Type to filter | ↑↓ Navigate | Enter Select | Esc Back")
+        hint.stylize("dim")
 
         content = Table.grid(padding=(0, 1))
         content.add_column()
         content.add_row(title)
-        content.add_row("")
-        content.add_row(search_bar)
-        content.add_row(result_count)
-        content.add_row("")
+        content.add_row(Text(""))
+        content.add_row(search_text)
+        content.add_row(count_text)
+        content.add_row(Text(""))
         content.add_row(table)
-        content.add_row("")
-        content.add_row("[dim]Type to filter | ↑↓ Navigate | Enter Select | Esc Back[/]")
+        content.add_row(Text(""))
+        content.add_row(hint)
 
         return Panel(content, title="Search", border_style="green")

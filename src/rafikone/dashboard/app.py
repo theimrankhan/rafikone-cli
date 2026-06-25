@@ -54,12 +54,27 @@ class DashboardApp:
         return self._screens[self.router.current]
 
     def _get_formatted_text(self) -> ANSI:
-        renderable = self._current.render()
-        buf = io.StringIO()
-        w, h = shutil.get_terminal_size()
-        c = Console(file=buf, width=w, height=h, force_terminal=True)
-        c.print(renderable)
-        return ANSI(buf.getvalue())
+        try:
+            renderable = self._current.render()
+            buf = io.StringIO()
+            w, h = shutil.get_terminal_size()
+            c = Console(file=buf, width=w, height=h, force_terminal=True)
+            c.print(renderable)
+            return ANSI(buf.getvalue())
+        except Exception:
+            from rich.panel import Panel
+            from rich.text import Text
+            buf = io.StringIO()
+            w, h = shutil.get_terminal_size()
+            c = Console(file=buf, width=w, height=h, force_terminal=True)
+            c.print(
+                Panel(
+                    Text("An error occurred while rendering this screen.\nPress Esc to go back.", style="red"),
+                    title="Render Error",
+                    border_style="red",
+                )
+            )
+            return ANSI(buf.getvalue())
 
     def _build_app(self) -> Application:
         kb = KeyBindings()

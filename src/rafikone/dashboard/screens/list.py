@@ -53,11 +53,12 @@ class ListScreen(Screen):
         title = Text("Quotations", style="bold cyan")
 
         if self._filter_site:
-            subtitle = f"[dim]Site: {self._filter_site}[/]"
+            subtitle = Text(f"Site: {self._filter_site}")
         elif self._filter_date:
-            subtitle = f"[dim]Date: {self._filter_date}[/]"
+            subtitle = Text(f"Date: {self._filter_date}")
         else:
-            subtitle = f"[dim]{len(self._quotations)} quotations[/]"
+            subtitle = Text(f"{len(self._quotations)} quotations")
+        subtitle.stylize("dim")
 
         table = Table(box=None, show_header=True, header_style="bold", padding=(0, 2))
         table.add_column("", no_wrap=True, width=2)
@@ -67,24 +68,33 @@ class ListScreen(Screen):
         table.add_column("PDF", no_wrap=True, justify="center")
 
         for i, q in enumerate(self._quotations):
-            pointer = "▸" if i == self._selected_index else " "
-            style = "" if i == self._selected_index else "dim"
-            pdf_icon = "[green]✓[/]" if q.pdf_exists else "[dim]✗[/]"
-            table.add_row(
-                f"[bold]{pointer}[/]",
-                f"[{style}]QTN-{q.number}[/]",
-                f"[{style}]{q.site}[/]",
-                f"[{style}]{q.date}[/]",
-                pdf_icon,
-            )
+            pointer = Text("▸" if i == self._selected_index else " ")
+            pointer.stylize("bold")
+
+            qtn_text = Text(f"QTN-{q.number}")
+            site_text = Text(q.site)
+            date_text = Text(q.date)
+
+            if i != self._selected_index:
+                qtn_text.stylize("dim")
+                site_text.stylize("dim")
+                date_text.stylize("dim")
+
+            pdf_icon = Text("✓")
+            pdf_icon.stylize("green" if q.pdf_exists else "dim")
+
+            table.add_row(pointer, qtn_text, site_text, date_text, pdf_icon)
+
+        hint = Text("↑↓ Navigate | Enter Details | Esc Back")
+        hint.stylize("dim")
 
         content = Table.grid(padding=(0, 1))
         content.add_column()
         content.add_row(title)
         content.add_row(subtitle)
-        content.add_row("")
+        content.add_row(Text(""))
         content.add_row(table)
-        content.add_row("")
-        content.add_row("[dim]↑↓ Navigate | Enter Details | Esc Back[/]")
+        content.add_row(Text(""))
+        content.add_row(hint)
 
         return Panel(content, title="List", border_style="blue")

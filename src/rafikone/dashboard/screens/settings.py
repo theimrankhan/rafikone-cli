@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from rafikone.config import CONFIG_FILE, get_config, get_project_root, set_project_root
+from rafikone.config import CONFIG_FILE, get_config
 from rafikone.dashboard.router import Router
 from rafikone.dashboard.screens import Screen
 
@@ -33,18 +32,29 @@ class SettingsScreen(Screen):
         info.add_column()
 
         root = self._cfg.get("project_root", "Not set")
-        info.add_row("Root Directory", f"[dim]{root}[/]")
-        info.add_row("Config File", f"[dim]{CONFIG_FILE}[/]")
-        info.add_row("")
-        info.add_row("[yellow]Tip:[/]", "Run [bold]rafikone config[/] from terminal")
-        info.add_row("", "to update the root directory path.")
+        root_text = Text(root)
+        root_text.stylize("dim")
+        info.add_row(Text("Root Directory"), root_text)
+
+        config_text = Text(str(CONFIG_FILE))
+        config_text.stylize("dim")
+        info.add_row(Text("Config File"), config_text)
+        info.add_row(Text(""))
+
+        tip_label = Text("Tip:")
+        tip_label.stylize("yellow")
+        tip_text = Text("Run rafikone config from terminal to update the root directory path.")
+        info.add_row(tip_label, tip_text)
+
+        hint = Text("Esc Back")
+        hint.stylize("dim")
 
         content = Table.grid(padding=(0, 1))
         content.add_column()
         content.add_row(title)
-        content.add_row("")
+        content.add_row(Text(""))
         content.add_row(info)
-        content.add_row("")
-        content.add_row("[dim]Esc Back[/]")
+        content.add_row(Text(""))
+        content.add_row(hint)
 
         return Panel(content, title="Settings", border_style="yellow")

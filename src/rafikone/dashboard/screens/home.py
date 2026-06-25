@@ -6,10 +6,10 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from rafikone.config import get_config, get_project_root
+from rafikone.config import get_project_root
 from rafikone.dashboard.router import Router
 from rafikone.dashboard.screens import Screen
-from rafikone.scanner import get_stats, scan_quotations
+from rafikone.scanner import get_stats, scan_quotations, scan_all
 
 MENU_ITEMS = [
     ("Create Quotation", "go:create"),
@@ -44,41 +44,53 @@ class HomeScreen(Screen):
             stats = {}
 
         try:
-            today_qtns = scan_quotations(date_filter=__import__("datetime").date.today().isoformat())
-            today_count = len(today_qtns)
+            today_count = len(
+                scan_quotations(
+                    date_filter=__import__("datetime").date.today().isoformat()
+                )
+            )
         except Exception:
             today_count = 0
 
         info = Table.grid(padding=(0, 2))
         info.add_column(style="bold")
         info.add_column()
-        info.add_row("Root", root_str)
-        info.add_row("Version", "1.1.0")
-        info.add_row("")
+        info.add_row(Text("Root"), Text(root_str))
+        info.add_row(Text("Version"), Text("1.1.0"))
+        info.add_row(Text(""))
 
         has_stats = bool(stats)
         if has_stats:
-            info.add_row("Total Quotations", str(stats.get("total_quotations", 0)))
-            info.add_row("Today", str(today_count))
-            info.add_row("Latest", str(stats.get("latest_quotation", "N/A")))
-            info.add_row("Missing PDFs", str(
-                sum(1 for s in __import__("rafikone.scanner", fromlist=["scan_all"]).scan_all()
-                    for q in s.quotations if not q.pdf_exists)
-            ))
-            info.add_row("")
-            info.add_row("Sites", str(stats.get("total_sites", 0)))
-            info.add_row("PDFs", str(stats.get("total_pdfs", 0)))
-            info.add_row("Invoices", str(stats.get("total_invoices", 0)))
+            info.add_row(Text("Total Quotations"), Text(str(stats.get("total_quotations", 0))))
+            info.add_row(Text("Today"), Text(str(today_count)))
+            info.add_row(Text("Latest"), Text(str(stats.get("latest_quotation", "N/A"))))
+            try:
+                missing = sum(
+                    1 for s in scan_all() for q in s.quotations if not q.pdf_exists
+                )
+                info.add_row(Text("Missing PDFs"), Text(str(missing)))
+            except Exception:
+                pass
+            info.add_row(Text(""))
+            info.add_row(Text("Sites"), Text(str(stats.get("total_sites", 0))))
+            info.add_row(Text("PDFs"), Text(str(stats.get("total_pdfs", 0))))
+            info.add_row(Text("Invoices"), Text(str(stats.get("total_invoices", 0))))
 
-        info.add_row("")
-        info.add_row("[dim]↑↓ Navigate | Enter Select | Esc Back | q Quit | Ctrl+C Exit[/]", "")
+        info.add_row(Text(""))
+        hint = Text("↑↓ Navigate | Enter Select | Esc Back | q Quit | Ctrl+C Exit")
+        hint.stylize("dim")
+        info.add_row(hint, Text(""))
 
         menu = Table.grid(padding=(0, 2))
         menu.add_column()
         for i, (label, _action) in enumerate(self._menu_items):
             prefix = "▸ " if i == self._selected_index else "  "
-            style = "bold white" if i == self._selected_index else "dim"
-            menu.add_row(f"{prefix}[{style}]{label}[/]")
+            text = Text(f"{prefix}{label}")
+            if i == self._selected_index:
+                text.stylize("bold white")
+            else:
+                text.stylize("dim")
+            menu.add_row(text)
 
         header = Table.grid(padding=(0, 2))
         header.add_column(no_wrap=True)
@@ -88,7 +100,7 @@ class HomeScreen(Screen):
         layout = Table.grid(padding=(0, 4))
         layout.add_column(no_wrap=True)
         layout.add_column(no_wrap=True)
-        layout.add_row(header, "")
+        layout.add_row(header, Text(""))
         layout.add_row(info, menu)
 
         return Panel(layout, title="Dashboard", border_style="cyan")
